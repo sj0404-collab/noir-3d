@@ -214,13 +214,16 @@ def build_armature():
 
 # ---------------------------------------------------------------- меши
 def build_body(rig):
-    """Строим две группы: цельное ТЕЛО (ремешится вorganичный силуэт)
-    и РЕКВИЗИТ (шляпа, галстук, лупа — остаётся жёстко привязан к костям).
+    """ТЕЛО собирается по группам (торс, каждая рука, каждая нога) — их потом
+    ремешат ПО ОТДЕЛЬНОСТИ, иначе воксель запаивает суставы и тело перестаёт
+    деформироваться.
 
-    Пропорции: рост 1.78 при голове ~0.235 -> ~7.5 голов, как у стилизованных
-    героев, а не 5-головый chibi из шаров.
+    Раскладка по вертикали (рост 1.80, ~8 голов):
+      подошва 0.00-0.02 | ботинок 0.01-0.13 | голень 0.12-0.52
+      колено 0.50 | бедро 0.50-0.92 | таз 0.90-1.05 | талия 1.03-1.15
+      грудь 1.13-1.42 | плечи 1.40-1.48 | шея 1.44-1.56 | голова 1.54-1.80
     """
-    body_parts = []
+    groups = {'torso': [], 'arm.L': [], 'arm.R': [], 'leg.L': [], 'leg.R': []}
     prop_parts = []
     M = {
         'coat': mat('Coat', C_COAT, rough=0.62),
@@ -239,107 +242,96 @@ def build_body(rig):
                    emit=(0.75, 0.85, 1.0, 1.0), emit_strength=0.6),
     }
 
-    def b(obj, mat_name):
+    def add(group, obj, mat_name):
         obj.data.materials.clear()
         obj.data.materials.append(M[mat_name])
-        body_parts.append(obj)
+        groups[group].append(obj)
         return obj
 
-    def p(obj, bone_name, mat_name):
+    def prop(obj, bone_name, mat_name):
         obj.data.materials.clear()
         obj.data.materials.append(M[mat_name])
         obj['bone_hint'] = bone_name
         prop_parts.append(obj)
         return obj
 
-    Y = 'Y_UP'
-    # ---------------- ТЕЛО ----------------
-    # таз -> талия -> грудь: три конуса разной ширины дают перепад силуэта
-    b(taper('Pelvis', 0.135, 0.118, 0.16, (0, 0, 0.97), None, verts=20), 'coat_dark')
-    b(taper('Waist', 0.118, 0.132, 0.14, (0, 0, 1.11), None, verts=20), 'coat')
-    b(taper('Chest', 0.132, 0.150, 0.24, (0, 0, 1.33), None, verts=20), 'coat')
-    # плечевой пояс — именно он даёт плечи, без него руки висят отдельно
-    b(taper('ShoulderYoke', 0.075, 0.070, 0.34, (0, 0, 1.435), None,
-            rot=(0, math.radians(90), 0), verts=16), 'coat')
-    b(capsule('Neck', 0.049, 0.05, None, (0, 0, 1.52), (1.0, 0.92, 1.0)), 'skin')
-    # голова: чуть вытянута вперёд, челюсть отдельным объёмом
-    b(capsule('Head', 0.093, 0.07, None, (0, -0.004, 1.645), (0.9, 0.98, 1.08)), 'skin')
-    b(capsule('Jaw', 0.070, 0.03, None, (0, -0.022, 1.598), (0.86, 0.92, 0.75)), 'skin')
-    b(capsule('CheekL', 0.045, 0.02, None, (0.042, -0.05, 1.612), (0.9, 0.9, 0.9)), 'skin')
-    b(capsule('CheekR', 0.045, 0.02, None, (-0.042, -0.05, 1.612), (0.9, 0.9, 0.9)), 'skin')
+    # ---------------- ТОРС ----------------
+    add('torso', taper('Pelvis', 0.140, 0.118, 0.16, (0, 0, 0.975), None, verts=22), 'coat_dark')
+    add('torso', taper('Waist', 0.118, 0.134, 0.13, (0, 0, 1.09), None, verts=22), 'coat')
+    add('torso', taper('Chest', 0.134, 0.152, 0.30, (0, 0, 1.275), None, verts=22), 'coat')
+    # плечевой пояс: именно он соединяет руки с туловищем
+    add('torso', taper('ShoulderYoke', 0.078, 0.072, 0.335, (0, 0, 1.428), None,
+                       rot=(0, math.radians(90), 0), verts=18), 'coat')
+    # длинное пальто: полы от 1.16 до 0.80, конус с 16 вершинами (не 4 — те
+    # проглатывали ноги) и глубиной по Y, а не «пирамида наружу»
+    add('torso', taper('CoatTail', 0.168, 0.140, 0.36, (0, 0, 0.98), None, verts=16), 'coat_dark')
+    add('torso', capsule('Neck', 0.050, 0.06, None, (0, 0, 1.495), (1.0, 0.92, 1.0)), 'skin')
+    add('torso', capsule('Head', 0.094, 0.07, None, (0, -0.004, 1.668), (0.9, 0.97, 1.10)), 'skin')
+    add('torso', capsule('Jaw', 0.070, 0.03, None, (0, -0.024, 1.618), (0.86, 0.9, 0.72)), 'skin')
+    add('torso', capsule('Nose', 0.015, 0.010, None, (0, -0.082, 1.652), (0.75, 0.85, 1.05)), 'skin')
 
-    # руки: сужаются от плеча к запястью
+    # ---------------- РУКИ ----------------
     for side, sgn in (('L', 1), ('R', -1)):
-        b(taper(f'Shoulder_{side}', 0.070, 0.058, 0.10, (sgn * 0.155, 0, 1.425), None,
-                rot=(0, math.radians(90 * sgn), 0), verts=14), 'coat')
-        b(taper(f'UpperArm_{side}', 0.058, 0.046, 0.24, (sgn * 0.175, 0, 1.285), None, verts=14), 'coat')
-        b(taper(f'Forearm_{side}', 0.046, 0.036, 0.22, (sgn * 0.175, 0, 1.045), None, verts=14), 'coat')
-        b(capsule(f'Hand_{side}', 0.042, 0.02, None, (sgn * 0.175, -0.008, 0.915), (0.8, 0.66, 1.15)),
-          'glove')
-        b(capsule(f'Thumb_{side}', 0.013, 0.014, None, (sgn * 0.140, -0.026, 0.898)), 'glove')
+        g = f'arm.{side}'
+        add(g, taper(f'Shoulder_{side}', 0.072, 0.058, 0.09, (sgn * 0.140, 0, 1.420), None,
+                     rot=(0, math.radians(90 * sgn), 0), verts=16), 'coat')
+        add(g, taper(f'UpperArm_{side}', 0.058, 0.046, 0.23, (sgn * 0.166, 0, 1.305), None, verts=16), 'coat')
+        add(g, taper(f'Forearm_{side}', 0.046, 0.035, 0.23, (sgn * 0.169, 0, 1.075), None, verts=16), 'coat')
+        add(g, capsule(f'Hand_{side}', 0.040, 0.02, None, (sgn * 0.170, -0.006, 0.945), (0.8, 0.66, 1.1)),
+            'glove')
+        add(g, capsule(f'Thumb_{side}', 0.013, 0.014, None, (sgn * 0.136, -0.024, 0.930)), 'glove')
 
-    # ноги: длинные, сужаются к щиколотке
+    # ---------------- НОГИ ----------------
     for side, sgn in (('L', 1), ('R', -1)):
-        b(taper(f'Thigh_{side}', 0.082, 0.060, 0.40, (sgn * 0.078, 0, 0.755), None, verts=16), 'coat_dark')
-        b(taper(f'Shin_{side}', 0.060, 0.040, 0.38, (sgn * 0.078, 0, 0.360), None, verts=16), 'boot')
-        b(capsule(f'Calf_{side}', 0.052, 0.02, None, (sgn * 0.078, -0.022, 0.330), (1.0, 0.9, 0.8)),
-          'boot')
+        g = f'leg.{side}'
+        add(g, taper(f'Thigh_{side}', 0.086, 0.062, 0.43, (sgn * 0.078, 0, 0.710), None, verts=18), 'coat_dark')
+        add(g, taper(f'Shin_{side}', 0.062, 0.040, 0.41, (sgn * 0.078, 0, 0.315), None, verts=18), 'boot')
+        add(g, capsule(f'Ankle_{side}', 0.046, 0.02, None, (sgn * 0.078, 0, 0.125), (1.0, 0.9, 0.9)), 'boot')
 
-    # полы пальто — расширяются книзу, читаются как плащ
+    # ---------------- РЕКВИЗИТ (жёстко на кости) ----------------
+    prop(cyl('HatBrim', 0.132, 0.012, (0, -0.006, 1.788), None, rot=(math.radians(8), 0, 0), verts=32),
+         'brim', 'hat')
+    prop(taper('HatCrown', 0.094, 0.086, 0.085, (0, 0.004, 1.832), None, verts=24), 'brim', 'hat')
+    prop(taper('HatTop', 0.086, 0.032, 0.04, (0, 0.004, 1.892), None, verts=24), 'brim', 'hat')
+    prop(cyl('HatBand', 0.096, 0.020, (0, 0.004, 1.800), None, verts=24), 'brim', 'coat_dark')
+    prop(capsule('HairCap', 0.097, 0.03, None, (0, 0.014, 1.716), (0.9, 0.95, 1.0)), 'head', 'hair')
+    prop(box('SideburnL', (0.011, 0.028, 0.052), (0.076, -0.014, 1.672), None, bevel=0.004), 'head', 'hair')
+    prop(box('SideburnR', (0.011, 0.028, 0.052), (-0.076, -0.014, 1.672), None, bevel=0.004), 'head', 'hair')
+    prop(capsule('EyeL', 0.013, 0.004, None, (0.036, -0.070, 1.686), (1.0, 0.45, 0.75)), 'head', 'eye')
+    prop(capsule('EyeR', 0.013, 0.004, None, (-0.036, -0.070, 1.686), (1.0, 0.45, 0.75)), 'head', 'eye')
+    prop(box('BrowL', (0.038, 0.010, 0.007), (0.037, -0.074, 1.712), None, rot=(0, 0.14, 0), bevel=0.003),
+         'head', 'hair')
+    prop(box('BrowR', (0.038, 0.010, 0.007), (-0.037, -0.074, 1.712), None, rot=(0, -0.14, 0), bevel=0.003),
+         'head', 'hair')
+    prop(box('ShirtV', (0.068, 0.018, 0.19), (0, -0.098, 1.365), None, bevel=0.006), 'chest', 'shirt')
+    prop(box('Tie', (0.042, 0.012, 0.17), (0, -0.112, 1.345), None, bevel=0.004), 'chest', 'tie')
+    prop(box('CollarL', (0.082, 0.052, 0.020), (0.044, -0.086, 1.474), None, rot=(0.25, 0, 0.30), bevel=0.005),
+         'collar', 'coat_dark')
+    prop(box('CollarR', (0.082, 0.052, 0.020), (-0.044, -0.086, 1.474), None, rot=(0.25, 0, -0.30), bevel=0.005),
+         'collar', 'coat_dark')
+    prop(box('LapelL', (0.050, 0.014, 0.20), (0.076, -0.086, 1.395), None, rot=(0, 0.22, 0.12), bevel=0.005),
+         'chest', 'coat_dark')
+    prop(box('LapelR', (0.050, 0.014, 0.20), (-0.076, -0.086, 1.395), None, rot=(0, -0.22, -0.12), bevel=0.005),
+         'chest', 'coat_dark')
+    prop(box('Belt', (0.295, 0.235, 0.034), (0, 0, 1.045), None, bevel=0.006), 'hips', 'boot')
+    prop(box('Buckle', (0.052, 0.020, 0.044), (0, -0.124, 1.045), None, bevel=0.006), 'hips', 'metal')
     for side, sgn in (('L', 1), ('R', -1)):
-        b(taper(f'CoatTail_{side}', 0.115, 0.150, 0.42, (sgn * 0.055, 0.004, 0.945), None,
-                verts=4, ), 'coat_dark') if False else None
-    b(taper('CoatSkirtF', 0.150, 0.125, 0.44, (0, -0.055, 0.945), None, verts=4), 'coat_dark')
-    b(taper('CoatSkirtB', 0.140, 0.115, 0.44, (0, 0.055, 0.945), None, verts=4), 'coat_dark')
+        prop(cyl(f'Cuff_{side}', 0.046, 0.026, (sgn * 0.169, 0, 0.985), None, verts=14),
+             f'forearm.{side}', 'shirt')
+        prop(box(f'Boot_{side}', (0.080, 0.225, 0.105), (sgn * 0.078, -0.055, 0.068), None, bevel=0.018),
+             f'foot.{side}', 'boot')
+        prop(box(f'Sole_{side}', (0.088, 0.240, 0.026), (sgn * 0.078, -0.058, 0.020), None, bevel=0.006),
+             f'foot.{side}', 'coat_dark')
+    prop(cyl('MagnifierRing', 0.044, 0.006, (0.228, -0.03, 0.930), None, rot=(math.pi / 2, 0, 0), verts=20),
+         'hand.L', 'metal')
+    prop(cyl('MagnifierGlass', 0.039, 0.004, (0.228, -0.03, 0.930), None, rot=(math.pi / 2, 0, 0), verts=20),
+         'hand.L', 'lamp')
+    prop(cyl('MagnifierHandle', 0.009, 0.072, (0.228, -0.066, 0.896), None, rot=(0.55, 0, 0), verts=10),
+         'hand.L', 'metal')
+    prop(capsule('LapelPin', 0.008, 0.003, None, (0.068, -0.095, 1.425), (1.0, 0.4, 1.0)), 'chest', 'metal')
 
-    # ---------------- РЕКВИЗИТ ----------------
-    # фетровая шляпа: тулья + наклонные поля + лента
-    p(cyl('HatBrim', 0.150, 0.013, (0, -0.004, 1.742), None, rot=(math.radians(7), 0, 0), verts=30),
-      'brim', 'hat')
-    p(taper('HatCrown', 0.098, 0.092, 0.10, (0, 0.002, 1.795), None, verts=24), 'brim', 'hat')
-    p(taper('HatTop', 0.092, 0.040, 0.045, (0, 0.002, 1.862), None, verts=24), 'brim', 'hat')
-    p(cyl('HatBand', 0.100, 0.022, (0, 0.002, 1.752), None, verts=24), 'brim', 'coat_dark')
-    # волосы и черты лица
-    p(capsule('HairCap', 0.096, 0.03, None, (0, 0.012, 1.690), (0.9, 0.96, 1.0)), 'head', 'hair')
-    p(box('SideburnL', (0.011, 0.028, 0.052), (0.076, -0.012, 1.648), None, bevel=0.004), 'head', 'hair')
-    p(box('SideburnR', (0.011, 0.028, 0.052), (-0.076, -0.012, 1.648), None, bevel=0.004), 'head', 'hair')
-    p(capsule('EyeL', 0.013, 0.004, None, (0.036, -0.070, 1.664), (1.0, 0.45, 0.75)), 'head', 'eye')
-    p(capsule('EyeR', 0.013, 0.004, None, (-0.036, -0.070, 1.664), (1.0, 0.45, 0.75)), 'head', 'eye')
-    p(box('BrowL', (0.038, 0.010, 0.007), (0.037, -0.074, 1.690), None, rot=(0, 0.14, 0), bevel=0.003),
-      'head', 'hair')
-    p(box('BrowR', (0.038, 0.010, 0.007), (-0.037, -0.074, 1.690), None, rot=(0, -0.14, 0), bevel=0.003),
-      'head', 'hair')
-    p(capsule('Nose', 0.015, 0.010, None, (0, -0.083, 1.632), (0.75, 0.85, 1.05)), 'head', 'skin')
-    # рубашка, галстук, воротник, лацканы
-    p(box('ShirtV', (0.070, 0.018, 0.20), (0, -0.098, 1.36), None, bevel=0.006), 'chest', 'shirt')
-    p(box('Tie', (0.042, 0.012, 0.18), (0, -0.112, 1.335), None, bevel=0.004), 'chest', 'tie')
-    p(box('CollarL', (0.085, 0.055, 0.020), (0.045, -0.085, 1.472), None, rot=(0.25, 0, 0.30), bevel=0.005),
-      'collar', 'coat_dark')
-    p(box('CollarR', (0.085, 0.055, 0.020), (-0.045, -0.085, 1.472), None, rot=(0.25, 0, -0.30), bevel=0.005),
-      'collar', 'coat_dark')
-    p(box('LapelL', (0.052, 0.014, 0.20), (0.078, -0.086, 1.395), None, rot=(0, 0.22, 0.12), bevel=0.005),
-      'chest', 'coat_dark')
-    p(box('LapelR', (0.052, 0.014, 0.20), (-0.078, -0.086, 1.395), None, rot=(0, -0.22, -0.12), bevel=0.005),
-      'chest', 'coat_dark')
-    p(box('Belt', (0.30, 0.24, 0.035), (0, 0, 1.045), None, bevel=0.006), 'hips', 'boot')
-    p(box('Buckle', (0.055, 0.020, 0.045), (0, -0.125, 1.045), None, bevel=0.006), 'hips', 'metal')
-    # манжеты и ботинки
-    for side, sgn in (('L', 1), ('R', -1)):
-        p(cyl(f'Cuff_{side}', 0.048, 0.028, (sgn * 0.175, 0, 0.960), None, verts=14), f'forearm.{side}', 'shirt')
-        p(box(f'Boot_{side}', (0.078, 0.215, 0.075), (sgn * 0.078, -0.052, 0.062), None, bevel=0.016),
-          f'foot.{side}', 'boot')
-        p(box(f'Sole_{side}', (0.086, 0.230, 0.024), (sgn * 0.078, -0.056, 0.024), None, bevel=0.006),
-          f'foot.{side}', 'coat_dark')
-    # лупа в правой руке + булавка
-    p(cyl('MagnifierRing', 0.046, 0.006, (0.235, -0.03, 0.905), None, rot=(math.pi / 2, 0, 0), verts=20),
-      'hand.L', 'metal')
-    p(cyl('MagnifierGlass', 0.041, 0.004, (0.235, -0.03, 0.905), None, rot=(math.pi / 2, 0, 0), verts=20),
-      'hand.L', 'lamp')
-    p(cyl('MagnifierHandle', 0.009, 0.075, (0.235, -0.068, 0.868), None, rot=(0.55, 0, 0), verts=10),
-      'hand.L', 'metal')
-    p(capsule('LapelPin', 0.008, 0.003, None, (0.070, -0.095, 1.425), (1.0, 0.4, 1.0)), 'chest', 'metal')
-
-    return body_parts, prop_parts, M
+    body_groups = {k: v for k, v in groups.items() if v}
+    return body_groups, prop_parts, M
 
 
 
@@ -361,10 +353,21 @@ def dist_point_segment(p, a, b):
     return (p - (a + ab * t)).length
 
 
-def skin_character(body, rig, k=4, power=3.0, falloff=0.28):
+def skin_character(body, rig, k=4, power=3.0, falloff=0.28, hint=None):
     """Веса вершин по K ближайшим костям. Детерминированно, без heat-weighting:
     генератор не может упасть, а для стилизованной фигуры этого достаточно."""
     segs = bone_segments(rig)
+    if hint:
+        wanted = set()
+        if hint == 'torso':
+            wanted = {'hips', 'spine', 'chest', 'neck', 'head', 'collar', 'coat.L', 'coat.R', 'root'}
+        elif hint.startswith('arm.'):
+            s_ = hint[-1]
+            wanted = {'shoulder.' + s_, 'upperarm.' + s_, 'forearm.' + s_, 'hand.' + s_, 'chest'}
+        elif hint.startswith('leg.'):
+            s_ = hint[-1]
+            wanted = {'thigh.' + s_, 'shin.' + s_, 'foot.' + s_, 'hips'}
+        segs = [sg for sg in segs if sg[0] in wanted]
     groups = {}
     for name, _h, _t in segs:
         groups[name] = body.vertex_groups.new(name=name)
@@ -630,19 +633,22 @@ def main():
     scene.frame_end = CLIPS['Idle']
 
     rig = build_armature()
-    body_parts, prop_parts, _mats = build_body(rig)
+    body_groups, prop_parts, _mats = build_body(rig)
     bpy.context.view_layer.update()
 
-    body = fuse_body(body_parts)
-    print('[BODY] вершин после ремеша=%d' % len(body.data.vertices))
-    skin_character(body, rig)
+    bodies = []
+    for gname, gparts in body_groups.items():
+        g = fuse_body(gparts, name=f'Body_{gname.replace(".", "_")}', voxel=0.012)
+        skin_character(g, rig, hint=gname)
+        bodies.append(g)
+        print('[GROUP] %-6s вершин=%d' % (gname, len(g.data.vertices)))
 
     for pr in prop_parts:
         bone_hint = pr.get('bone_hint', 'chest')
         if bone_hint not in rig.data.bones:
             bone_hint = 'chest'
         bind_rigid(pr, rig, bone_hint)
-    print('[PROPS] привязано=%d' % len(prop_parts))
+    print('[PROPS] привязано=%d тел=%d' % (len(prop_parts), len(bodies)))
 
     # готовим NLA-дорожки: каждая анимация — отдельный action
     tmp_actions = {}
