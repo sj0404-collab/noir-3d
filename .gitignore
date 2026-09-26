@@ -23,3 +23,6 @@ coverage/
 
 # бэкапы blend
 *.blend1
+
+# остатки шаблона vite
+src/assets/
