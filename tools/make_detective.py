@@ -176,36 +176,36 @@ def build_armature():
     # корень
     bone('root', (0, 0, 0), (0, 0, 0.1))
     # таз
-    bone('hips', (0, 0, 0.92), (0, 0, 1.02), 'root')
+    bone('hips', (0, 0, 0.98), (0, 0, 1.08), 'root')
     # позвоночник
-    bone('spine', (0, 0, 1.0), (0, 0, 1.28), 'hips')
-    bone('chest', (0, 0, 1.26), (0, 0, 1.46), 'spine')
-    bone('neck', (0, 0, 1.46), (0, 0, 1.56), 'chest')
-    bone('head', (0, 0, 1.54), (0, 0, 1.78), 'neck')
+    bone('spine', (0, 0, 1.06), (0, 0, 1.20), 'hips')
+    bone('chest', (0, 0, 1.18), (0, 0, 1.44), 'spine')
+    bone('neck', (0, 0, 1.42), (0, 0, 1.56), 'chest')
+    bone('head', (0, 0, 1.54), (0, 0, 1.80), 'neck')
 
-    # плечи -> руки
-    bone('shoulder.L', (0.05, 0, 1.44), (0.19, 0, 1.43), 'chest')
-    bone('upperarm.L', (0.19, 0, 1.43), (0.19, 0, 1.16), 'shoulder.L')
-    bone('forearm.L', (0.19, 0, 1.16), (0.19, 0, 0.94), 'upperarm.L', connected=True)
-    bone('hand.L', (0.19, 0, 0.94), (0.19, 0, 0.86), 'forearm.L', connected=True)
-    bone('shoulder.R', (-0.05, 0, 1.44), (-0.19, 0, 1.43), 'chest')
-    bone('upperarm.R', (-0.19, 0, 1.43), (-0.19, 0, 1.16), 'shoulder.R')
-    bone('forearm.R', (-0.19, 0, 1.16), (-0.19, 0, 0.94), 'upperarm.R', connected=True)
-    bone('hand.R', (-0.19, 0, 0.94), (-0.19, 0, 0.86), 'forearm.R', connected=True)
+    # плечи -> руки (рука висит до 0.86)
+    bone('shoulder.L', (0.045, 0, 1.43), (0.165, 0, 1.42), 'chest')
+    bone('upperarm.L', (0.165, 0, 1.42), (0.168, 0, 1.20), 'shoulder.L')
+    bone('forearm.L', (0.168, 0, 1.20), (0.170, 0, 0.98), 'upperarm.L', connected=True)
+    bone('hand.L', (0.170, 0, 0.98), (0.170, 0, 0.90), 'forearm.L', connected=True)
+    bone('shoulder.R', (-0.045, 0, 1.43), (-0.165, 0, 1.42), 'chest')
+    bone('upperarm.R', (-0.165, 0, 1.42), (-0.168, 0, 1.20), 'shoulder.R')
+    bone('forearm.R', (-0.168, 0, 1.20), (-0.170, 0, 0.98), 'upperarm.R', connected=True)
+    bone('hand.R', (-0.170, 0, 0.98), (-0.170, 0, 0.90), 'forearm.R', connected=True)
 
-    # бёдра -> ноги
-    bone('thigh.L', (0.085, 0, 0.92), (0.085, 0, 0.55), 'hips')
-    bone('shin.L', (0.085, 0, 0.55), (0.085, 0, 0.14), 'thigh.L', connected=True)
-    bone('foot.L', (0.085, 0, 0.14), (0.085, -0.16, 0.05), 'shin.L', connected=True)
-    bone('thigh.R', (-0.085, 0, 0.92), (-0.085, 0, 0.55), 'hips')
-    bone('shin.R', (-0.085, 0, 0.55), (-0.085, 0, 0.14), 'thigh.R', connected=True)
-    bone('foot.R', (-0.085, 0, 0.14), (-0.085, -0.16, 0.05), 'shin.R', connected=True)
+    # ноги: подошва 0.0, бедро до 0.92
+    bone('thigh.L', (0.078, 0, 0.92), (0.078, 0, 0.50), 'hips')
+    bone('shin.L', (0.078, 0, 0.50), (0.078, 0, 0.12), 'thigh.L', connected=True)
+    bone('foot.L', (0.078, 0, 0.12), (0.078, -0.17, 0.04), 'shin.L', connected=True)
+    bone('thigh.R', (-0.078, 0, 0.92), (-0.078, 0, 0.50), 'hips')
+    bone('shin.R', (-0.078, 0, 0.50), (-0.078, 0, 0.12), 'thigh.R', connected=True)
+    bone('foot.R', (-0.078, 0, 0.12), (-0.078, -0.17, 0.04), 'shin.R', connected=True)
 
-    # детали: шляпа- brim, воротник, полы пальто
-    bone('coat.L', (0.06, 0, 1.18), (0.06, 0, 0.75), 'hips')
-    bone('coat.R', (-0.06, 0, 1.18), (-0.06, 0, 0.75), 'hips')
-    bone('brim', (0, 0, 1.72), (0, 0, 1.74), 'head')
-    bone('collar', (0, 0, 1.46), (0, 0, 1.50), 'chest')
+    # детали: полы пальто, воротник, поля шляпы
+    bone('coat.L', (0.055, 0, 1.16), (0.055, 0, 0.80), 'hips')
+    bone('coat.R', (-0.055, 0, 1.16), (-0.055, 0, 0.80), 'hips')
+    bone('brim', (0, 0, 1.78), (0, 0, 1.82), 'head')
+    bone('collar', (0, 0, 1.44), (0, 0, 1.50), 'chest')
 
     bpy.ops.object.mode_set(mode='OBJECT')
     rig.show_in_front = True
