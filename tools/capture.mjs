@@ -44,16 +44,8 @@ await page.waitForTimeout(1200)
 
 // SwiftShader рендерит медленно, поэтому кадр снимаем с большим таймаутом
 await page.screenshot({ path: out, timeout: 180000, animations: 'allow' })
+const title = await page.title()
 await browser.close()
 
-const diag = await (async () => {
-  try {
-    return ''
-  } catch {
-    return ''
-  }
-})()
-
-console.log(`OK ${out} ready=${ready}`)
+console.log(`OK ${out} ready=${ready} title=${JSON.stringify(title)}`)
 if (logs.length) console.log('--- консоль страницы ---\n' + logs.slice(0, 20).join('\n'))
-void diag

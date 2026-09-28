@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "models": "bash tools/models.sh",
+    "loops": "python3 tools/check_loops.py public/models/detective.glb public/models/car.glb public/models/tram.glb public/models/street_kit.glb",
+    "shots": "node tools/shots.mjs",
+    "release": "node tools/release.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",
