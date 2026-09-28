@@ -20,6 +20,8 @@ yarn-error.log*
 # служебное
 .cache/
 coverage/
+__pycache__/
+*.pyc
 
 # бэкапы blend
 *.blend1
