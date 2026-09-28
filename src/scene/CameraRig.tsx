@@ -8,6 +8,11 @@ export type CamSpec = {
   dist: number
   target: [number, number, number]
   fov: number
+  /** параметры камеры заданы из URL — они главнее автокадрирования */
+  manualDist: boolean
+  manualTarget: boolean
+  /** камеру ведёт turntable (?spin=), CameraRig уступает */
+  turntable: boolean
 }
 
 /**
@@ -27,6 +32,9 @@ function readSpec(): CamSpec {
     dist: n('dist', 11),
     target: [n('tx', 0), n('ty', 1.4), n('tz', 0)],
     fov: n('fov', 42),
+    manualDist: q.has('dist'),
+    manualTarget: q.has('tx') || q.has('ty') || q.has('tz'),
+    turntable: q.has('spin'),
   }
 }
 
@@ -34,7 +42,17 @@ export function useCamSpec() {
   return useRef<CamSpec>(readSpec())
 }
 
-export function CameraRig({ enabled = true }: { enabled?: boolean }) {
+/**
+ * `frame` — автокадрирование по габаритам модели (стенды `scene=props`):
+ * если дистанция или цель не заданы из URL, берутся из bounding sphere.
+ */
+export function CameraRig({
+  enabled = true,
+  frame,
+}: {
+  enabled?: boolean
+  frame?: { target: [number, number, number]; radius: number }
+}) {
   const { camera } = useThree()
   const spec = useRef<CamSpec>(readSpec())
   const applied = useRef(false)
@@ -46,9 +64,14 @@ export function CameraRig({ enabled = true }: { enabled?: boolean }) {
   }, [camera])
 
   useFrame(({ gl }) => {
-    if (!enabled || applied.current) return
+    if (!enabled || applied.current || spec.current.turntable) return
     applied.current = true
-    const { az, el, dist, target } = spec.current
+    const { az, el, fov, manualDist, manualTarget } = spec.current
+    const fit = frame
+      ? (frame.radius * 2.9) / (2 * Math.tan(THREE.MathUtils.degToRad(fov) / 2))
+      : null
+    const dist = manualDist || fit === null ? spec.current.dist : fit
+    const target = manualTarget || !frame ? spec.current.target : frame.target
     const a = THREE.MathUtils.degToRad(az)
     const e = THREE.MathUtils.degToRad(el)
     const x = target[0] + dist * Math.cos(e) * Math.sin(a)
