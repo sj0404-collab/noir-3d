@@ -11,7 +11,8 @@
 |---|---|---|
 | 1. Проверка | `npm run lint && npm run build` | линтер и продакшен-сборка должны проходить |
 | 2. Модели | `npm run models` | пересборка всех `.glb` из `tools/make_*.py` |
-| 3. Кадры | `npm run shots` | скриншоты сцены/персонажей/транспорта в `../tmp/shots` |
+| 2a. Циклы | `npm run loops` | бесшовность клипов во всех `.glb` (0 скачков на стыках) |
+| 3. Кадры | `npm run shots` | скриншоты улицы/персонажа/транспорта в `../tmp/shots` |
 | 4. Коммит | `git add -A && git commit -m "..."` | одно логическое изменение — один коммит (Conventional Commits) |
 | 5. Пуш | `git push origin master` | изменения попадают в `sj0404-collab/noir-3d` |
 | 6. Тег + релиз | `npm run release -- "сообщение" "patch\|minor\|major"` | bumps `package.json`, ставит тег `vX.Y.Z`, собирает релиз с ассетами |
@@ -22,9 +23,10 @@
 ```bash
 npm run build && npm run lint          # 1
 npm run models                          # 2
+npm run loops                           # 2a
 npm run shots                           # 3
 git add -A && git commit -m "feat(env): модульные фасады и флаги на ветру"
-npm push origin master                  # 5
+git push origin master                  # 5
 npm run release -- "Модульные фасады + флаги на ветру" minor   # 6
 ```
 
@@ -41,14 +43,17 @@ npm run release -- "Модульные фасады + флаги на ветру
 
 ## Что идёт в релиз
 
-- **Ассеты:** скриншоты (`tmp/shots/*.png`) и, если собраны, видео клипов.
+- **Ассеты:** скриншоты (`../tmp/shots/*.png`) и, если собраны, видео клипов.
 - **Тело релиза:** короткий список — что добавлено, что изменилось, что сломано
   (если ничего не сломано — так и написать), номер версии моделей.
 - **Чек-лист перед `npm run release`:**
   - [ ] `npm run build` проходит
   - [ ] `npm run lint` без ошибок
   - [ ] `public/models/*.glb` новее исходников `tools/make_*.py`
-  - [ ] скриншоты сняты и не пустые (проверить `readPixels`/размер файла)
+  - [ ] `npm run loops` — 0 скачков на стыках циклов
+  - [ ] скриншоты сняты и не пустые: `npm run shots` печатает `mean/stddev`
+    по каждому кадру (проверка идёт по самим PNG через `tools/png.mjs` —
+    `readPixels` и `gl.info.render.calls` после пост-обработки врут)
   - [ ] `docs/HANDOFF.md` обновлён под текущее состояние
 
 ## Модели и ассеты
@@ -64,8 +69,20 @@ npm run release -- "Модульные фасады + флаги на ветру
 Пересборка всех моделей разом:
 
 ```bash
+npm run models                 # blender ищется сам: $BLENDER → ../tmp/blender-*/blender → PATH
+npm run models -- --only make_env
 BLENDER=/путь/к/blender npm run models
 ```
+
+Стенды для осмотра моделей (те же модели, но крупно и на нейтральном фоне):
+
+```
+?scene=model&clip=Walk&t=0.35&az=35&el=6&dist=3.2&ty=0.95   — персонаж
+?scene=props&prop=car|tram|kit&clip=Drive&t=0.4            — транспорт и кит
+```
+
+Камера в `scene=props` сама кадрирует модель по габаритам; любой параметр
+камеры из URL главнее. Подробности — в `docs/HANDOFF.md`.
 
 Свои временные файлы (сборки, скриншоты, распакованный Blender) — только в
 `/home/runner/hub-work/noir-3d/tmp`, никогда в `/tmp` (см. `MANIFEST.md`).
