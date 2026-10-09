@@ -44,7 +44,13 @@ npm run release -- "Модульные фасады + флаги на ветру
 
 ## Что идёт в релиз
 
-- **Ассеты:** скриншоты (`../tmp/shots/*.png`) и, если собраны, видео клипов.
+- **Ассеты:** скриншоты (`../tmp/shots/*.png`), если собраны — видео клипов,
+  `noir-det-debug.apk` из `../tmp` и `noir-det-web.zip` (веб-сборка для
+  автообновления Android-приложения; `release.mjs` собирает её сама и заодно
+  поднимает `versionCode`/`versionName` в `android/app/build.gradle`).
+- **Важно:** `npm run release` публикует APK, который уже лежит в `../tmp`.
+  После релиза нужно пересобрать APK (`npm run apk`) под новую версию и
+  перезалить его в выпущенный релиз (см. ниже).
 - **Тело релиза:** короткий список — что добавлено, что изменилось, что сломано
   (если ничего не сломано — так и написать), номер версии моделей.
 - **Чек-лист перед `npm run release`:**
@@ -57,6 +63,17 @@ npm run release -- "Модульные фасады + флаги на ветру
     `readPixels` и `gl.info.render.calls` после пост-обработки врут)
   - [ ] `npm run apk` — Android-приложение собирается, APK скопирован в `../tmp`
   - [ ] `docs/HANDOFF.md` обновлён под текущее состояние
+
+**Перезалив APK в релиз после `npm run release`:**
+
+```bash
+npm run apk                 # удёргивает versionName из build.gradle, пересобирает
+cp android/app/build/outputs/apk/debug/app-debug.apk ../tmp/noir-det-debug.apk
+ID=$(gh api repos/sj0404-collab/noir-3d/releases/tags/vX.Y.Z \
+     --jq '.assets[] | select(.name=="noir-det-debug.apk") | .id')
+gh api -X DELETE "repos/sj0404-collab/noir-3d/releases/assets/$ID"
+gh release upload vX.Y.Z ../tmp/noir-det-debug.apk --clobber
+```
 
 ## Модели и ассеты
 

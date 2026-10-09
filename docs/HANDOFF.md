@@ -65,6 +65,23 @@ npm run apk      # npm run build && cap sync android && cd android && ./gradlew 
   `android/keystore.properties` + `android/keystore/release.p12`.
 - В `.github/workflows/build-hub-snapshot.yml` шаг подписи уже ищет эти пути.
 
+### Автообновление и оффлайн
+
+- **Оффлайн:** игра не тянет ничего из интернета — модели без Draco, CDN нет,
+  всё в `public/` внутри APK. Прекрасно играется без сети.
+- **Автообновление:** приложение (нативно, в `MainActivity`) на старте в фоне
+  спрашивает `api.github.com/repos/sj0404-collab/noir-3d/releases/latest`,
+  сравнивает `tag_name` с версией APK и, если новее, качает `noir-det-web.zip`
+  в `filesDir/versions/<tag>`. На следующем запуске игра кормится с локального
+  `AssetHttpServer` (127.0.0.1:8097) из скачанной папки через
+  `config.server.url`. Нет сети — молча играем встроенной/скачанной версией.
+- Файлы: `android/.../noirdet/{UpdateManager,AssetHttpServer,Version,MainActivity}.java`.
+  `release.mjs` публикует `noir-det-web.zip` и синхронизирует
+  `versionCode`/`versionName` в `android/app/build.gradle`.
+- Грабли: 1) версии сравнивать **численно** (`v0.10.0` > `v0.3.1`), 2) URL
+  ассета искать со сдвигом `du + 22` (иначе в URL уползают `: "`), 3) на API 28+
+  надо `android:usesCleartextTraffic="true"`, иначе WebView не откроет http://127.0.0.1.
+
 ## 4. Инструменты и команды
 
 ```bash

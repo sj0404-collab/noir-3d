@@ -55,7 +55,21 @@ execFileSync('npm', ['run', 'build'], { cwd: repoRoot, stdio: 'inherit' })
 // 3. версия + коммит
 pkg.version = next
 writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n')
-const files = ['package.json', ...(existsSync(join(repoRoot, 'package-lock.json')) ? ['package-lock.json'] : [])]
+// синхронизируем версию Android-сборки (baseline для автообновления)
+const gradlePath = join(repoRoot, 'android/app/build.gradle')
+if (existsSync(gradlePath)) {
+  const gradle = readFileSync(gradlePath, 'utf8')
+  const vc = Number((gradle.match(/versionCode\s+(\d+)/) || [])[1] || 0) + 1
+  writeFileSync(
+    gradlePath,
+    gradle.replace(/versionCode\s+\d+/, `versionCode ${vc}`).replace(/versionName\s+"[^"]*"/, `versionName "${next}"`),
+  )
+}
+const files = [
+  'package.json',
+  ...(existsSync(join(repoRoot, 'package-lock.json')) ? ['package-lock.json'] : []),
+  ...(existsSync(gradlePath) ? ['android/app/build.gradle'] : []),
+]
 git(['add', ...files])
 git(['commit', '-m', `chore(release): ${tag} — ${message}`])
 
@@ -83,6 +97,10 @@ if (existsSync(tmpDir)) {
     if (/\.apk$/i.test(f)) assets.push(join(tmpDir, f))
   }
 }
+// веб-сборка для автообновления в Android-приложении
+const webZip = join(tmpDir, 'noir-det-web.zip')
+execFileSync('zip', ['-rq', webZip, '.'], { cwd: join(repoRoot, 'dist'), encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
+if (existsSync(webZip)) assets.push(webZip)
 
 const body = [
   message,
@@ -90,6 +108,9 @@ const body = [
   `### Что нового в ${tag}`,
   '',
   'Скриншоты и модели лежат в ассетах релиза и в репозитории (`public/models`).',
+  '',
+  '`noir-det-web.zip` — веб-сборка для автообновления: Android-приложение',
+  'скачает её при следующем запуске (оффлайн при этом не ломается).',
   '',
   'Пересобрать локально: `npm ci && npm run models && npm run build`.',
   '',
