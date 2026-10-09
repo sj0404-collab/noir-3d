@@ -10,6 +10,14 @@ import { getState } from './state'
 const DETECTIVE = '/models/detective.glb'
 
 /**
+ * timeScale клипов подогнан под реальный шаг детектива, чтобы ноги не
+ * «скользили» по асфальту: Walk 1.5 м/цикл, Run 2.4 м/цикл.
+ * Клипы: Walk 1.067 c (30 fps × 32), Run 0.8 c (24 кадра).
+ */
+const WALK_TIME_SCALE = 1.067 / (1.5 / WALK_SPEED)
+const RUN_TIME_SCALE = 0.8 / (2.4 / RUN_SPEED)
+
+/**
  * Управляемый детектив: скелет клонируется через SkeletonUtils, клипы
  * Idle/Walk/Run смешиваются по весам от скорости. Модель смотрит по +Z,
  * поэтому rotation.y = atan2(dir.x, dir.z).
@@ -62,16 +70,16 @@ export function Player() {
     playerState.speed = speed
     playerState.running = running
 
-    // веса анимаций: плавно тянем к целевой
+    // веса анимаций: демпфер вместо скачков — рука/нога не «бьётся» на стыке клипов
     const want = speed === 0 ? 'Idle' : running ? 'Run' : 'Walk'
     target.current = want
-    const k = Math.min(1, step * 9)
     for (const n of ['Idle', 'Walk', 'Run']) {
       const a = actions[n]
       if (!a) continue
       const cur = weights.current[n] ?? 0
-      weights.current[n] = cur + (Number(n === want) - cur) * k
+      weights.current[n] = THREE.MathUtils.damp(cur, Number(n === want), 9, step)
       a.setEffectiveWeight(weights.current[n])
+      if (n !== 'Idle') a.timeScale = running ? RUN_TIME_SCALE : WALK_TIME_SCALE
     }
 
     g.position.copy(playerState.pos)

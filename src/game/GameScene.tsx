@@ -9,6 +9,9 @@ import { ParkedCar } from './ParkedCar'
 import { RenderProbe } from '../scene/RenderProbe'
 import { startGame } from './state'
 import { resetPlayer } from './playerState'
+import { StreetLife } from './StreetLife'
+import { StreetProps } from './StreetProps'
+import { Rain } from './Rain'
 
 /** Для скриншотов и быстрого теста: ?autostart=1 сразу запускает дело. */
 function AutoStart() {
@@ -47,6 +50,9 @@ export function GameScene() {
       />
 
       <NoirStreet />
+      <StreetLife />
+      <StreetProps />
+      <Rain />
       <Player />
       <ClueMarks />
       <ParkedCar />
