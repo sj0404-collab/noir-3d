@@ -76,6 +76,13 @@ const assets = existsSync(shotsDir)
       .map((f) => join(shotsDir, f))
       .filter((f) => statSync(f).size > 1024)
   : []
+// APK Android, собранный `npm run apk` (кладётся в ../tmp)
+const tmpDir = resolve(repoRoot, '../tmp')
+if (existsSync(tmpDir)) {
+  for (const f of readdirSync(tmpDir)) {
+    if (/\.apk$/i.test(f)) assets.push(join(tmpDir, f))
+  }
+}
 
 const body = [
   message,

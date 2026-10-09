@@ -15,6 +15,7 @@
 | 3. Кадры | `npm run shots` | скриншоты улицы/персонажа/транспорта в `../tmp/shots` |
 | 4. Коммит | `git add -A && git commit -m "..."` | одно логическое изменение — один коммит (Conventional Commits) |
 | 5. Пуш | `git push origin master` | изменения попадают в `sj0404-collab/noir-3d` |
+| 5a. Android | `npm run apk` | APK в `android/app/build/outputs/apk/debug/` и `../tmp/` |
 | 6. Тег + релиз | `npm run release -- "сообщение" "patch\|minor\|major"` | bumps `package.json`, ставит тег `vX.Y.Z`, собирает релиз с ассетами |
 | 7. Проверка | `gh release view` | релиз виден на GitHub, ассеты скачиваются |
 
@@ -54,6 +55,7 @@ npm run release -- "Модульные фасады + флаги на ветру
   - [ ] скриншоты сняты и не пустые: `npm run shots` печатает `mean/stddev`
     по каждому кадру (проверка идёт по самим PNG через `tools/png.mjs` —
     `readPixels` и `gl.info.render.calls` после пост-обработки врут)
+  - [ ] `npm run apk` — Android-приложение собирается, APK скопирован в `../tmp`
   - [ ] `docs/HANDOFF.md` обновлён под текущее состояние
 
 ## Модели и ассеты

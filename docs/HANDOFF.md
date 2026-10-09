@@ -1,11 +1,9 @@
 # Нуар-Дет 3D — передача состояния
 
-Дата: 28.09.2026. Репозиторий: `https://github.com/sj0404-collab/noir-3d`
-(ветка `master`, релиз `v0.1.0`, push без незакоммиченного хвоста).
-
-Проект — перенос «Нуар-Дета» с three.js на React Three Fiber с приоритетом
-качества картинки (PBR, мягкие тени, IBL, пост-обработка) вместо текущего
-toon-шейдера. Масштаб — один город Ноктис, стиль сохранён.
+Репозиторий: `https://github.com/sj0404-collab/noir-3d` (ветка `master`).
+Проект — детективная игра в ночном Ноктисе на React Three Fiber (React 19, TS,
+Vite, three 0.186). Отдаётся как веб-игра и как Android-приложение через
+Capacitor 6 (пакет `com.sj0404.noirdet`, «Нуар-Дет», landscape).
 
 ---
 
@@ -13,160 +11,110 @@ toon-шейдера. Масштаб — один город Ноктис, сти
 
 | Часть | Состояние |
 |---|---|
-| Каркас Vite + React 19 + TS + R3F + drei + postprocessing | собрано, `npm run build` проходит |
-| Ночной нуар-участок (`src/scene/NoirStreet.tsx`) | рендерится, PBR + тени + мокрый асфальт |
-| IBL-окружение (`src/scene/ProceduralEnv.tsx`) | PMREM-бейк, работает |
-| Пост-обработка (`src/scene/Post.tsx`) | bloom, хром. аберрация, зерно, виньетка, ACES, SMAA |
-| Персонаж (`tools/make_detective.py` → `detective.glb`) | v4: аниме-пропорции, 26 костей, 6 бесшовных клипов |
-| Транспорт (`tools/make_vehicles.py`) | седан и трамвай, колёса на костях, 4 клипа, циклы бесшовные |
-| Окружение (`tools/make_env.py` → `street_kit.glb`) | 2 фасада + 11 предметов реквизита + флаг на ветру (клип `Wind`) |
-| Стенды: `scene=model` (персонаж), `scene=props` (car/tram/kit) | общий `Studio` + автокадрирование по габаритам |
-| Скриншоты (`npm run shots` → `../tmp/shots`) | 10 кадров, детерминированно, проверка «пустого» PNG |
-| Коммиты | всё запушено в `master`, тег `v0.1.0` |
+| Каркас Vite + React 19 + TS + R3F + drei + postprocessing | `npm run build` проходит, `npm run lint` без ошибок |
+| **Игра** (`src/game/`, `src/ui/`) | тайтл → игра → победа/поражение, сбор 5 улик, таймер 4:00 |
+| Управление | виртуальный стик, свайп-поворот камеры, кнопка «ОСМОТРЕТЬ», WASD/пробел/Esc |
+| Камера от третьего лица (`FollowCamera`) | висит за спиной, поворачивается пальцем |
+| Ночной нуар-участок (`src/scene/NoirStreet.tsx`) | PBR + мягкие тени + мокрый асфальт |
+| IBL-окружение (`src/scene/ProceduralEnv.tsx`) | PMREM-бейк, сброс render target |
+| Пост-обработка | `Post` (стенды) и облегчённый `GamePost` (игра) |
+| Персонаж, транспорт, окружение (glTF из `tools/`) | 26 костей, 6 клипов; седан/трамвай; киты улицы |
+| **Android (Capacitor)** | `android/` собран, APK собирается через `npm run apk` |
+| Скриншоты (`npm run shots`) | 12 кадров (2 игровых + 10 стендов), 0 пустых |
 
-## 2. Инструменты
+## 2. Игровой слой (кратко)
+
+- **Состояние** — `src/game/state.ts`: мини-стор на `useSyncExternalStore`
+  (`phase`, собранные улики, таймер, спикер). React дёргается только на
+  события; таймер обновляет UI раз в секунду, остальное живёт в refs.
+- **Игрок** — `src/game/Player.tsx`: `SkeletonUtils.clone`, клипы
+  `Idle/Walk/Run` смешиваются по весам от скорости. Модель смотрит по **+Z**
+  (Blender -Y → glTF +Z), поэтому `rotation.y = atan2(dir.x, dir.z)`.
+- **Ввод** — `src/game/input.ts` (стик/клавиши/поворот камеры) и
+  `src/ui/Joystick.tsx` (свой DOM, без ре-рендеров).
+- **Логика** — `src/game/GameLogic.tsx`: таймер, ближайшая улика, финал у
+  машины. Позиция игрока — в `src/game/playerState.ts`.
+- Осторожно с осями стрейфа: `right = forward × up = (-fz, 0, fx)`; перепутать
+  — стик будет уводить вбок зеркально.
+
+## 3. Android
 
 ```bash
-# Blender 4.2.9 LTS — портативный, распакован в tmp (см. MANIFEST.md)
-ls ../tmp/blender-4.2.9-linux-x64/blender        # может потерять +x и lib/ после
-chmod +x ../tmp/blender-4.2.9-linux-x64/blender  # восстановления раннера —
-tar -xJf ../tmp/dl/blender.tar.xz -C ../tmp      # тогда распаковать заново
-../tmp/blender-4.2.9-linux-x64/blender --version
-
-chromium --version      # системный, для headless WebGL (SwiftShader)
-ffpeg -version          # В ЭТОМ ОКРУЖЕНИИ НЕТ — ставить для видео/контакт-листа
+npm run icons    # bash tools/make_icons.sh — иконки через ImageMagick
+npm run apk      # npm run build && cap sync android && cd android && ./gradlew assembleDebug
 ```
 
-`blender` ищется автоматически: `$BLENDER` → `../tmp/blender-*/blender` →
-`/opt/tools/blender/blender` → `PATH`.
+- `capacitor.config.ts`: `appId com.sj0404.noirdet`, `appName Noir-Det`, `webDir dist`.
+- Отображаемое имя «Нуар-Дет» — в `android/app/src/main/res/values/strings.xml`.
+- `AndroidManifest.xml`: `screenOrientation="sensorLandscape"`,
+  `hardwareAccelerated` и `largeHeap` у приложения.
+- `android/local.properties` (в git не идёт) указывает на
+  `/usr/local/lib/android/sdk`; сборка идёт wrapper-ом Gradle 8.2.1 + JDK 17.
+- APK: `android/app/build/outputs/apk/debug/app-debug.apk` (~8 МБ). Подпись —
+  debug-ключ; release-подпись CI тянет из ветки, если положить
+  `android/keystore.properties` + `android/keystore/release.p12`.
+- В `.github/workflows/build-hub-snapshot.yml` шаг подписи уже ищет эти пути.
 
-## 3. Команды
+## 4. Инструменты и команды
 
 ```bash
-cd /home/runner/hub-work/noir-3d/code
-npm ci
-
-npm run build        # tsc -b && vite build
-npm run lint         # oxlint (0 ошибок, ~10 warnings в src/scene — см. п. 6)
-npm run models       # пересборка всех .glb из tools/make_*.py (~40 c на каждый)
-npm run models -- --only make_env          # один генератор
-npm run loops        # бесшовность циклов во всех .glb (check_loops.py)
-npm run shots        # 10 кадров в ../tmp/shots + проверка на пустые
-npm run shots -- car # только кадры по фильтру
-npm run release -- "сообщение" minor        # bump + тег + GitHub Release
+npm run dev / build / lint / preview
+npm run models [-- --only make_env]   # .glb из tools/make_*.py (Blender)
+npm run loops                         # бесшовность клипов во всех .glb
+npm run shots [-- game]               # 12 кадров в ../tmp/shots + проверка на пустые
+npm run icons / sync / apk
+npm run release -- "сообщение" minor  # bump + тег + GitHub Release
 ```
 
-Ручной кадр (для отладки ракурса):
+Ручной кадр (диагностика ракурса):
 
 ```bash
-cd dist && setsid nohup python3 -m http.server 4173 --bind 127.0.0.1 &
-cd .. && node tools/capture.mjs "http://127.0.0.1:4173/?scene=props&prop=tram&clip=Run" out.png 1024 640 300000
+cd dist && setsid nohup python3 -m http.server 4173 --bind 127.0.0.1 >/dev/null 2>&1 &
+cd .. && node tools/capture.mjs "http://127.0.0.1:4173/?scene=game&autostart=1&dpr=1" out.png 960 540 300000
 node tools/png.mjs out.png    # mean/stddev: кадр живой или пустой
 ```
 
-Параметры URL: `az/el/dist/tx/ty/tz/fov` — камера (`CameraRig`), `spin` —
-turntable (`Turntable`, перебивает `CameraRig`), `scene=model` — стенд
-персонажа, `scene=props&prop=car|tram|kit` — стенд моделей,
-`clip=Idle|Walk|Run|Turn|Point|Scan|Drive|Siren|Wind` + `t=0..1` — поза,
-`ry`, `scale`, `herob=1` — поставить персонажа в улицу, `dpr`,
-`probe=1` — диагностика в `document.title`, `nopost=1`, `flatroad=1`,
-`loop=demand`.
+Параметры URL стендов: `az/el/dist/tx/ty/tz/fov`, `spin`, `scene=street|model|props`,
+`prop=car|tram|kit`, `clip=Idle|Walk|Run|Turn|Point|Scan|Drive|Siren|Wind`, `t`,
+`ry`, `scale`, `herob=1`, `dpr`, `probe=1`, `nopost=1`, `flatroad=1`, `loop=demand`.
+Игровые отладочные: `scene=game`, `autostart=1`, `px=&pz=` (спавн), `camdebug=1`
+(проекция игрока в `document.title`).
 
-## 4. Модели
+## 5. Грабли, на которые уже наступали (не повторять)
 
-Всё генерируется из `tools/` общей библиотекой `noirlib.py` (палитра, риг,
-запекание бесшовных циклов, экспорт glTF/blend). Пересборка детерминирована:
-одинаковый код → одинаковые байты, можно сравнивать `git diff` по бинарям.
+- **`readPixels` из дефолтного буфера даёт нули** без `preserveDrawingBuffer`, а
+  `gl.info.render.calls` после пост-обработки врёт (1 call, 12 tris). Кадр
+  проверять по PNG: `tools/png.mjs`.
+- **`<Environment>` из drei в headless оставляет render target привязанным** —
+  сцена уходит в cubemap. Отсюда `ProceduralEnv` со сбросом `gl.setRenderTarget(null)`.
+- **`useFrame` с priority > 0 отключает авто-рендер** в R3F (так работает
+  `EffectComposer`) — диагностический `RenderProbe` с priority гасил сцену.
+- **`Turntable` и `CameraRig` дрались за камеру** — при `?spin=` CameraRig уступает.
+- **Тяжёлые кадры:** MSAA ×4 + SMAA + bloom = 2–4 мин на SwiftShader. В игре
+  `GamePost` без MSAA-буфера; `dpr` в headless строго 1.
+- **Двойной tone-mapping** даёт маджентовые окна. В `App.tsx` `NoToneMapping`,
+  ACES только в посте.
+- **Сервер поднимать через `setsid nohup`**, иначе умирает вместе с shell агента.
+- `PCFSoftShadowMap` в three 0.186 удалён (только warning).
+- **Capacitor + `location.search`:** в APK query пустой, поэтому дефолт — игра
+  (`scene=game`). Не полагаться на query в игровом пути.
+- **Оси стрейфа легко перепутать** (см. п. 2) — проверять `camdebug`-логами.
+- Стенды `scene=street|model|props` должны указываться явно: раньше отсутствие
+  `scene` означало улицу, теперь — игру.
+- `tools/shots.mjs` держит свой сервер на порту 4173 — перед запуском убрать
+  ручной `python3 -m http.server` (иначе `EADDRINUSE`).
 
-| Модель | Файл | Клипы | Проверка циклов |
-|---|---|---|---|
-| Детектив | `detective.glb` | Idle 96, Walk 32, Run 24, Turn 40, Point 24, Scan 48 | 6/6 бесшовные |
-| Седан | `car.glb` | Drive 48, Idle 48, Siren 24 | 3/3 бесшовные |
-| Трамвай | `tram.glb` | Run 60 | 1/1 бесшовный |
-| Улица | `street_kit.glb` | Wind 48 | 1/1 бесшовный |
+## 6. Что делать дальше
 
-Персонаж прошёл путь v1 → v2 → v3 → v4:
+1. **Контент дела:** диалоги с подозреваемыми, несколько дел, разные улики.
+2. **Враг/напряжение:** свет фонаря-конуса, преследование, шум.
+3. **Город:** перевести улицу на `street_kit.glb` (`<Clone>` + LOD), толпа,
+   транспорт по маршруту, ветер на флагах.
+4. **Мобильная полировка:** качество по FPS (динамический dpr), вибро, звук.
+5. **Release-подпись APK** и публикация артефакта в GitHub Release.
 
-- **v1** (капсулы) — «картошка на ножках», пропорции ~5 голов;
-- **v2** (конусы + воксельный ремеш всего тела) — **провалился**: ремеш с
-  вокселем 0.022 запаял руки в торс, полы пальто проглотили ноги;
-- **v3** — ремеш по группам конечностей, суставы разделены, ~8 голов;
-  не бесшовные `Walk`/`Run`;
-- **v4** (текущая) — общая библиотека `noirlib`, аниме-пропорции (голова ~6
-  ростовых единиц, худые конечности, острые скулы, узкое пальто с разрезом),
-  26 костей, все 6 клипов запечены в бесшовные циклы `noirlib.bake_loop`
-  (проверено `npm run loops`: скачков на стыках 0).
+## 7. Контекст
 
-Косметика, которую всё ещё стоит править (на геометрию не влияет): полы
-пальто `CoatTail`, плоское лицо (челюсть/скулы), выпирающие локти, спрятанный
-ремень.
-
-## 5. Что делать дальше (в порядке приоритета)
-
-1. **Отдать обещанное пользователю** — главный незакрытый вопрос:
-   - контакт-лист 3×2 по модели (перед, 3/4, лево, право, зад, сверху) —
-     `ffmpeg -i a.png -i b.png ... -filter_complex tile=3x2 out.png`
-     (**ffmpeg в этом окружении нет**);
-   - видео клипов (Idle/Walk/Run/Turn) mp4 H.264 + webm, 60 fps, без звука,
-     из PNG-последовательности: `ffmpeg -framerate 60 -i frames/%04d.png ...`;
-   - сводное видео «поворотный круг 360° + все анимации» — через `?spin=`.
-2. **Перевести улицу на `street_kit.glb`**: сейчас `NoirStreet.tsx` собирает
-   фасады процедурно, а готовые модели (`facade_a/b`, реквизит, флаги) в сцене
-   не используются. Нужен `<Clone>` вместо ремеша и LOD на дальний план.
-3. **Сцена до Genshin-уровня**: ветер-анимация флагов в сцене, толпа с LOD,
-   транспорт в движении по маршруту.
-4. **Карта порта фич** из three.js-версии (`nuar-det` v1.11.0) в R3F.
-5. **Косметика персонажа** (п. 4) — после видео, видна на контакт-листе.
-
-## 6. Грабли, на которые уже наступили (не повторять)
-
-- **`readPixels` из дефолтного WebGL-буфера всегда даёт нули**, если нет
-  `preserveDrawingBuffer`; после пост-обработки `gl.info.render.calls` тоже
-  врёт (1 call, 1 triangle — это финальный полноэкранный пасс композитора).
-  Проверять кадр надо по самому PNG: `tools/png.mjs` (mean/stddev, без
-  зависимостей). `RenderProbe` с `probe=1` в `document.title` для этого
-  годится только как диагностика, не как критерий.
-- **`<Environment>` из drei в headless-прогоне оставляет render target
-  привязанным** — сцена уходит в cubemap и кадр выходит пустым. Отсюда
-  `ProceduralEnv` со сбросом `gl.setRenderTarget(null)`.
-- **`useFrame` с `priority > 0` отключает авто-рендер** в R3F (так работает
-  `EffectComposer`). Диагностический `RenderProbe` с priority 2/3 из-за этого
-  гасил сцену.
-- **`Turntable` и `CameraRig` дрались за камеру**: оба ставят позицию в
-  `useFrame`, и `CameraRig` перебивал `?spin=`. Теперь при наличии `spin`
-  CameraRig уступает.
-- `chromium --screenshot` с `--virtual-time-budget` может снять
-  **недоприсованный буфер** (получались пустые кадры). Надёжен только
-  Playwright с ожиданием `window.__ready`.
-- `page.screenshot()` по умолчанию таймаутится 30 c — на SwiftShader кадр не
-  успевает; нужен `timeout: 180000`.
-- **Кадр 1280×720 с пост-обработкой на SwiftShader — 2–4 минуты** (MSAA ×4 +
-  SMAA + bloom). Три кадра прогрева `RenderProbe` могут не уложиться в
-  дефолтные 90 c, поэтому `tools/shots.mjs` даёт capture 300 c, а стенды
-  снимаются в 640–1024 px по ширине. Для видео это ~40 кадров на клип.
-- Тяжёлые кадры: 5 теневых point-light'ов = 30 проходов кубических карт.
-  Держать максимум один. `dpr` в headless — строго 1.
-- Двойной tone-mapping (renderer + эффект пост-обработки) даёт цвета
-  вроде маджентовых окон. В `App.tsx` стоит `NoToneMapping`, ACES живёт
-  только в `Post`.
-- Сервер надо поднимать через `setsid nohup ... &`, иначе он умирает вместе
-  с shell-командой агента. В `tools/shots.mjs` сервер свой и гасится вместе
-  со скриптом.
-- `PCFSoftShadowMap` в three 0.186 удалён (предупреждение в консоли).
-- **Раннер восстанавливает `../tmp` частично**: распакованный Blender может
-  прийти без `lib/` и без бита `+x` — тогда `blender` не стартует
-  (`libblender_cpu_check.so`), лечится перераспаковкой `tmp/dl/blender.tar.xz`.
-- **Локальный `master` может быть сиротским**: восстановление состояния
-  раннера иногда делает корневой коммит с тем же деревом, что и `origin/master`.
-  Пушить нельзя (non-fast-forward) — лечится
-  `git rebase --onto origin/master <сиротский-коммит> master`.
-
-## 7. Контекст репозиториев
-
-- `/home/runner/hub-work/noir-3d/code` — этот проект, запушен в
-  `sj0404-collab/noir-3d` (`master`, релиз `v0.1.0`).
-- `/home/runner/hub-work/noir-3d/tmp` — только временное: сборки, кеши,
-  скриншоты, распакованный Blender. В git не попадает.
-- `nuar-det/`, `code-v1.2.1-OLD/`, `wip-backup-20260926/` — клоны и бэкапы
-  **прошлой машины, в этом окружении их нет**. Исходник фич для порта —
-  `sj0404-collab/nuar-det` v1.11.0.
+- `/home/runner/hub-work/noir-3d/code` — проект (git, `sj0404-collab/noir-3d`).
+- `/home/runner/hub-work/noir-3d/tmp` — только временное: `shots/`, APK, Blender.
+- Blender ищется сам: `$BLENDER` → `../tmp/blender-*/blender` → `/opt/tools/blender/blender` → `PATH`.

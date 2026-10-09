@@ -11,9 +11,14 @@
     "models": "bash tools/models.sh",
     "loops": "python3 tools/check_loops.py public/models/detective.glb public/models/car.glb public/models/tram.glb public/models/street_kit.glb",
     "shots": "node tools/shots.mjs",
+    "icons": "bash tools/make_icons.sh",
+    "sync": "npm run build && cap sync android",
+    "apk": "npm run sync && cd android && ./gradlew assembleDebug",
     "release": "node tools/release.mjs"
   },
   "dependencies": {
+    "@capacitor/android": "^6.2.2",
+    "@capacitor/core": "^6.2.2",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.1",
     "@react-three/postprocessing": "^3.1.2",
@@ -25,6 +30,7 @@
     "three": "^0.186.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "^6.2.2",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",

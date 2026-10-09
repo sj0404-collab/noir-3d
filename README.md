@@ -1,32 +1,45 @@
-# React + TypeScript + Vite
+# Нуар-Дет 3D
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Детективная игра в ночном Ноктисе на React Three Fiber. Это уже не стенд с
+моделями: есть управляемый детектив, виртуальный стик, улики, таймер дела и
+финал у полицейской машины. Собирается и как веб-игра, и как приложение для
+Android (APK) через Capacitor.
 
-Currently, two official plugins are available:
+## Игра
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Цель:** найти 5 улик на улице за 4 минуты и вернуться к машине.
+- **Управление (тач):** стик слева — идти, свайп по экрану — повернуть камеру,
+  кнопка «ОСМОТРЕТЬ» справа — подобрать улику.
+- **Управление (клавиатура):** `WASD` / стрелки, `Пробел` — осмотреть, `Esc` — пауза.
 
-## React Compiler
+## Запуск и сборка
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm ci
+npm run dev            # веб-игра в разработке
+npm run build          # продакшен-сборка (dist/)
+npm run lint           # oxlint
 
-## Expanding the Oxlint configuration
+npm run models         # пересборка .glb из tools/make_*.py (нужен Blender)
+npm run shots          # скриншоты игры/улицы/моделей в ../tmp/shots
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+npm run icons          # launcher-иконки Android
+npm run apk            # web build + cap sync + assembleDebug → APK
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Готовый APK: `android/app/build/outputs/apk/debug/app-debug.apk`
+(пакет `com.sj0404.noirdet`, имя «Нуар-Дет», landscape).
+
+## Режимы по URL
+
+Игра — по умолчанию (`?scene=game`). Стенды для осмотра моделей остались:
+
+```
+?scene=street&az=18&el=8&dist=13       — ночная улица без игрока
+?scene=model&clip=Walk&t=0.35          — персонаж крупно
+?scene=props&prop=car|tram|kit         — транспорт и реквизит
+?scene=game&autostart=1                — игра сразу, без титульного экрана
+?nopost=1                              — без пост-обработки (быстро/headless)
+```
+
+Подробности состояния и грабли — `docs/HANDOFF.md`, процесс релиза — `docs/WORKFLOW.md`.

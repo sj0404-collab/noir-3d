@@ -20,9 +20,11 @@ const distDir = join(repoRoot, 'dist')
 
 /** набор кадров: имя → { q: query, w, h } */
 const SHOTS = [
-  { name: 'street-wide', w: 1280, h: 720, q: 'az=18&el=8&dist=13&ty=1.5&dpr=1' },
-  { name: 'street-deep', w: 1280, h: 720, q: 'az=64&el=3&dist=24&ty=2.2&dpr=1' },
-  { name: 'street-herob', w: 1280, h: 720, q: 'az=-24&el=5&dist=7&ty=1.4&herob=1&clip=Idle&t=0.2&dpr=1' },
+  { name: 'game-title', w: 1024, h: 640, q: 'scene=game&dpr=1' },
+  { name: 'game-play', w: 1024, h: 640, q: 'scene=game&autostart=1&dpr=1' },
+  { name: 'street-wide', w: 1280, h: 720, q: 'scene=street&az=18&el=8&dist=13&ty=1.5&dpr=1' },
+  { name: 'street-deep', w: 1280, h: 720, q: 'scene=street&az=64&el=3&dist=24&ty=2.2&dpr=1' },
+  { name: 'street-herob', w: 1280, h: 720, q: 'scene=street&az=-24&el=5&dist=7&ty=1.4&herob=1&clip=Idle&t=0.2&dpr=1' },
   { name: 'model-front', w: 640, h: 800, q: 'scene=model&clip=Idle&t=0&az=0&el=2&dist=3.2&ty=0.95&dpr=1' },
   { name: 'model-3q', w: 640, h: 800, q: 'scene=model&clip=Idle&t=0&az=35&el=6&dist=3.2&ty=0.95&dpr=1' },
   { name: 'model-walk', w: 640, h: 800, q: 'scene=model&clip=Walk&t=0.35&az=20&el=4&dist=3.2&ty=0.95&dpr=1' },

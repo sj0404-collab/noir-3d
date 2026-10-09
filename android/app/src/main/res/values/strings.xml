@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Нуар-Дет</string>
+    <string name="title_activity_main">Нуар-Дет</string>
+    <string name="package_name">com.sj0404.noirdet</string>
+    <string name="custom_url_scheme">com.sj0404.noirdet</string>
+</resources>
